@@ -105,7 +105,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: url('BG.jpg') no-repeat center center;
+    background: url('/BG.jpg') no-repeat center center;
     background-size: cover;
     z-index: 1000;
     overflow: hidden;
