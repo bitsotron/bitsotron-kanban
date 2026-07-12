@@ -91,31 +91,61 @@
     }
 
     // ═══════ STORAGE ═══════
-    function loadTasks() {
+    async function loadTasks() {
         try {
-            const data = localStorage.getItem(STORAGE_KEY);
-            tasks = data ? JSON.parse(data) : [];
-            // Migrate legacy tasks with string assignee to array assignees
-            tasks.forEach(t => {
-                if (t.assignee && !t.assignees) {
-                    t.assignees = [t.assignee];
-                }
-                if (!t.assignees) {
-                    t.assignees = [];
-                }
-                if (!t.activity) {
-                    t.activity = [];
-                }
-            });
-        } catch {
-            tasks = [];
+            const res = await fetch('/api/tasks');
+            if (res.ok) {
+                tasks = await res.json();
+            } else {
+                throw new Error('Neon DB load failed');
+            }
+        } catch (e) {
+            console.warn('Neon tasks load failed, falling back to LocalStorage:', e);
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                tasks = data ? JSON.parse(data) : [];
+            } catch {
+                tasks = [];
+            }
         }
-        if (tasks.length === 0) seedTasks();
-        checkDeadlines(); // Check deadlines on load
+
+        // Migrate array assignees and activity
+        tasks.forEach(t => {
+            if (t.assignee && !t.assignees) {
+                t.assignees = [t.assignee];
+            }
+            if (!t.assignees) {
+                t.assignees = [];
+            }
+            if (!t.activity) {
+                t.activity = [];
+            }
+        });
+
+        if (tasks.length === 0) {
+            seedTasks();
+        } else {
+            checkDeadlines(); // Check deadlines on load
+        }
     }
 
-    function saveTasks() {
+    function saveTasks(singleTaskToSync = null) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        if (singleTaskToSync) {
+            fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(singleTaskToSync)
+            }).catch(err => console.error('Neon Task Sync Error:', err));
+        } else {
+            tasks.forEach(t => {
+                fetch('/api/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(t)
+                }).catch(err => console.error('Neon Task Sync Error:', err));
+            });
+        }
     }
 
     function loadSession() {
@@ -238,6 +268,16 @@
         byId('appContainer').classList.remove('hidden');
         setupHeader();
         renderBoard();
+        
+        // Pinned Items write access toggle
+        const addPinBtn = byId('addPinBtn');
+        if (addPinBtn) {
+            if (hasWriteAccess()) {
+                addPinBtn.classList.remove('hidden');
+            } else {
+                addPinBtn.classList.add('hidden');
+            }
+        }
         
         // Log online session
         if (currentUser) {
@@ -1275,28 +1315,86 @@
     }
 
     // ═══════ UPGRADE FEATURES (MULTIPLE ASSIGNEES, AUTO ACTIONS, DAILY STATUS) ═══════
-    function loadLogs() {
+    async function loadLogs() {
         try {
-            dailyUpdates = JSON.parse(localStorage.getItem(STATUS_UPDATES_KEY)) || [];
-            statusLogs = JSON.parse(localStorage.getItem(STATUS_LOG_KEY)) || [];
-            onlineLogs = JSON.parse(localStorage.getItem(ONLINE_LOG_KEY)) || [];
-        } catch {
-            dailyUpdates = [];
-            statusLogs = [];
-            onlineLogs = [];
+            const [updatesRes, statusRes, onlineRes, pinsRes] = await Promise.all([
+                fetch('/api/daily-updates'),
+                fetch('/api/status-logs'),
+                fetch('/api/online-logs'),
+                fetch('/api/pins')
+            ]);
+            
+            if (updatesRes.ok) dailyUpdates = await updatesRes.json();
+            if (statusRes.ok) statusLogs = await statusRes.json();
+            if (onlineRes.ok) onlineLogs = await onlineRes.json();
+            if (pinsRes.ok) pins = await pinsRes.json();
+        } catch (e) {
+            console.warn('Neon logs load failed, falling back to LocalStorage:', e);
+            try {
+                dailyUpdates = JSON.parse(localStorage.getItem(STATUS_UPDATES_KEY)) || [];
+                statusLogs = JSON.parse(localStorage.getItem(STATUS_LOG_KEY)) || [];
+                onlineLogs = JSON.parse(localStorage.getItem(ONLINE_LOG_KEY)) || [];
+                pins = JSON.parse(localStorage.getItem(PINS_KEY)) || [];
+            } catch {
+                dailyUpdates = [];
+                statusLogs = [];
+                onlineLogs = [];
+                pins = [];
+            }
+        }
+        
+        if (pins.length === 0) {
+            pins = SEED_PINS;
+            savePins();
         }
     }
 
-    function saveDailyUpdates() {
+    function saveDailyUpdates(singleUpdate = null) {
         localStorage.setItem(STATUS_UPDATES_KEY, JSON.stringify(dailyUpdates));
+        const itemToSync = singleUpdate || (dailyUpdates.length > 0 ? dailyUpdates[0] : null);
+        if (itemToSync) {
+            fetch('/api/daily-updates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(itemToSync)
+            }).catch(err => console.error('Neon save daily update error:', err));
+        }
     }
 
-    function saveStatusLogs() {
+    function saveStatusLogs(singleLog = null) {
         localStorage.setItem(STATUS_LOG_KEY, JSON.stringify(statusLogs));
+        const itemToSync = singleLog || (statusLogs.length > 0 ? statusLogs[0] : null);
+        if (itemToSync) {
+            fetch('/api/status-logs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(itemToSync)
+            }).catch(err => console.error('Neon save status log error:', err));
+        }
     }
 
-    function saveOnlineLogs() {
+    function saveOnlineLogs(singleLog = null) {
         localStorage.setItem(ONLINE_LOG_KEY, JSON.stringify(onlineLogs));
+        const itemToSync = singleLog || (onlineLogs.length > 0 ? onlineLogs[0] : null);
+        if (itemToSync) {
+            fetch('/api/online-logs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(itemToSync)
+            }).catch(err => console.error('Neon save online log error:', err));
+        }
+    }
+
+    function savePins(singlePin = null) {
+        localStorage.setItem(PINS_KEY, JSON.stringify(pins));
+        const itemToSync = singlePin || (pins.length > 0 ? pins[0] : null);
+        if (itemToSync) {
+            fetch('/api/pins', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(itemToSync)
+            }).catch(err => console.error('Neon save pin error:', err));
+        }
     }
 
     function renderAvatarStack(assigneeIds) {
@@ -1720,9 +1818,9 @@
     }
 
     // ═══════ INIT ═══════
-    function init() {
-        loadTasks();
-        loadLogs();
+    async function init() {
+        await loadTasks();
+        await loadLogs();
         renderLogin();
         bindEvents();
 
