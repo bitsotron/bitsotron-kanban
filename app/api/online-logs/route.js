@@ -22,6 +22,7 @@ export async function POST(request) {
     try {
         const body = await request.json();
         const { id, userName, type, details, timestamp } = body;
+        const logTimestamp = timestamp || Date.now();
         await pool.query(
             `INSERT INTO online_logs (id, user_name, type, details, timestamp)
              VALUES ($1, $2, $3, $4, $5)
@@ -30,7 +31,7 @@ export async function POST(request) {
                  type = EXCLUDED.type,
                  details = EXCLUDED.details,
                  timestamp = EXCLUDED.timestamp`,
-            [id, userName, type, details || null, timestamp]
+            [id, userName, type, details || null, logTimestamp]
         );
         return NextResponse.json({ success: true });
     } catch (err) {

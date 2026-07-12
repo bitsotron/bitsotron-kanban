@@ -21,6 +21,7 @@ export async function POST(request) {
     try {
         const body = await request.json();
         const { id, userId, text, timestamp } = body;
+        const updateTimestamp = timestamp || Date.now();
         await pool.query(
             `INSERT INTO daily_updates (id, user_id, text, timestamp)
              VALUES ($1, $2, $3, $4)
@@ -28,7 +29,7 @@ export async function POST(request) {
                  user_id = EXCLUDED.user_id,
                  text = EXCLUDED.text,
                  timestamp = EXCLUDED.timestamp`,
-            [id, userId, text, timestamp]
+            [id, userId, text, updateTimestamp]
         );
         return NextResponse.json({ success: true });
     } catch (err) {

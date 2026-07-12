@@ -24,6 +24,7 @@ export async function POST(request) {
     try {
         const body = await request.json();
         const { id, taskId, taskTitle, userName, fromStatus, toStatus, timestamp } = body;
+        const logTimestamp = timestamp || Date.now();
         await pool.query(
             `INSERT INTO status_logs (id, task_id, task_title, user_name, from_status, to_status, timestamp)
              VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -34,7 +35,7 @@ export async function POST(request) {
                  from_status = EXCLUDED.from_status,
                  to_status = EXCLUDED.to_status,
                  timestamp = EXCLUDED.timestamp`,
-            [id, taskId, taskTitle, userName, fromStatus, toStatus, timestamp]
+            [id, taskId, taskTitle, userName, fromStatus, toStatus, logTimestamp]
         );
         return NextResponse.json({ success: true });
     } catch (err) {
