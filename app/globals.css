@@ -2116,3 +2116,116 @@ select.form-input {
     .login-roles { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
     .user-info { display: none; }
 }
+
+/* ── Theme Overrides ── */
+[data-theme="dark"] {
+    --bg-primary: #0F172A;
+    --bg-secondary: #1E293B;
+    --bg-tertiary: #334155;
+    --bg-board: #0B0F19;
+
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-tertiary: #64748B;
+
+    --gradient-brand-subtle: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.15) 100%);
+    --gradient-mesh: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.12) 0%, transparent 50%),
+                     radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.1) 0%, transparent 50%),
+                     radial-gradient(ellipse at 50% 80%, rgba(59,130,246,0.08) 0%, transparent 50%);
+
+    --glass-bg: rgba(30, 41, 59, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0,0,0,0.2);
+    --glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0,0,0,0.3);
+
+    --border-light: 1px solid rgba(255, 255, 255, 0.08);
+    --border-subtle: 1px solid rgba(255, 255, 255, 0.05);
+    --shadow-xs: 0 1px 3px rgba(0,0,0,0.2);
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.25);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.35);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.4);
+}
+
+[data-theme="black"] {
+    --bg-primary: #000000;
+    --bg-secondary: #0A0A0A;
+    --bg-tertiary: #141414;
+    --bg-board: #000000;
+
+    --text-primary: #FFFFFF;
+    --text-secondary: #A3A3A3;
+    --text-tertiary: #525252;
+
+    --gradient-brand-subtle: linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.2) 100%);
+    --gradient-mesh: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.18) 0%, transparent 50%),
+                     radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.15) 0%, transparent 50%),
+                     radial-gradient(ellipse at 50% 80%, rgba(59,130,246,0.12) 0%, transparent 50%);
+
+    --glass-bg: rgba(10, 10, 10, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0,0,0,0.4);
+    --glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0,0,0,0.5);
+
+    --border-light: 1px solid rgba(255, 255, 255, 0.12);
+    --border-subtle: 1px solid rgba(255, 255, 255, 0.08);
+    --shadow-xs: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.7);
+}
+
+[data-theme="dark"] .login-screen::before,
+[data-theme="black"] .login-screen::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 0;
+}
+[data-theme="dark"] .login-container,
+[data-theme="black"] .login-container {
+    z-index: 1;
+}
+
+/* Theme Selector styles */
+.theme-selector {
+    display: inline-flex;
+    background: var(--bg-tertiary);
+    border: var(--border-light);
+    border-radius: 30px;
+    padding: 3px;
+    margin-right: 0.75rem;
+    gap: 3px;
+    align-items: center;
+}
+
+.theme-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.theme-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="light"] .theme-btn:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.theme-btn.active {
+    background: var(--bg-secondary);
+    color: var(--accent-primary);
+    box-shadow: var(--shadow-sm);
+}
