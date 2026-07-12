@@ -27,6 +27,10 @@
     const SESSION_KEY = 'bitsotron_kanban_user';
     const CHAT_KEY = 'bitsotron_kanban_chat_v2';
     const ONLINE_KEY = 'bitsotron_kanban_online_v2';
+    const STATUS_UPDATES_KEY = 'bitsotron_kanban_daily_updates_v2';
+    const STATUS_LOG_KEY = 'bitsotron_kanban_status_log_v2';
+    const ONLINE_LOG_KEY = 'bitsotron_kanban_online_log_v2';
+    const STATUS_REQUESTS_KEY = 'bitsotron_kanban_status_requests_v2';
 
     // ═══════ STATE ═══════
     let currentUser = null;
@@ -34,10 +38,14 @@
     let pins = [];
     let chats = [];
     let onlineUsers = {};
+    let dailyUpdates = [];
+    let statusLogs = [];
+    let onlineLogs = [];
     let filters = { search: '', assignee: '', priority: '', myTasks: false };
     let deleteTargetId = null;
     let pinsPanelOpen = false;
     let chatPanelOpen = false;
+    let statusSidebarOpen = false;
     let unreadChatCount = 0;
     let heartbeatInterval = null;
 
@@ -87,10 +95,23 @@
         try {
             const data = localStorage.getItem(STORAGE_KEY);
             tasks = data ? JSON.parse(data) : [];
+            // Migrate legacy tasks with string assignee to array assignees
+            tasks.forEach(t => {
+                if (t.assignee && !t.assignees) {
+                    t.assignees = [t.assignee];
+                }
+                if (!t.assignees) {
+                    t.assignees = [];
+                }
+                if (!t.activity) {
+                    t.activity = [];
+                }
+            });
         } catch {
             tasks = [];
         }
         if (tasks.length === 0) seedTasks();
+        checkDeadlines(); // Check deadlines on load
     }
 
     function saveTasks() {
@@ -217,7 +238,17 @@
         byId('appContainer').classList.remove('hidden');
         setupHeader();
         renderBoard();
+        
+        // Log online session
+        if (currentUser) {
+            if (!sessionStorage.getItem('logged_online_this_session')) {
+                logOnlineSession(currentUser.id, 'login');
+                sessionStorage.setItem('logged_online_this_session', 'true');
+            }
+        }
+        
         startHeartbeat();
+        checkStatusRequests(); // Check if updates are requested
     }
 
     // ═══════ RENDER: HEADER ═══════
@@ -240,10 +271,8 @@
         filterAssignee.innerHTML = '<option value="">All Members</option>' +
             TEAM.map(m => `<option value="${m.id}">${m.name} (${m.role})</option>`).join('');
 
-        // Populate task form assignee
-        const taskAssignee = byId('taskAssignee');
-        taskAssignee.innerHTML = '<option value="">Select member</option>' +
-            TEAM.map(m => `<option value="${m.id}">${m.name} (${m.role})</option>`).join('');
+        // Populate multi-assignee selection checkboxes
+        populateAssigneesGrid();
     }
 
     // ═══════ RENDER: BOARD ═══════
@@ -267,7 +296,14 @@
                     <span class="column-count">${colTasks.length}</span>
                 </div>
                 <div class="column-body" data-column="${col.id}">
-                    ${colTasks.length === 0 ? '<div class="column-empty">No tasks</div>' : ''}
+                    ${colTasks.length === 0 ? `
+                        <div class="column-empty">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.35;margin-bottom:0.15rem;">
+                                <circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>
+                            </svg>
+                            <span>No tasks</span>
+                        </div>
+                    ` : ''}
                 </div>
             `;
 
@@ -292,9 +328,9 @@
         return tasks.filter(t => {
             if (t.status !== columnId) return false;
             if (filters.search && !t.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
-            if (filters.assignee && t.assignee !== filters.assignee) return false;
+            if (filters.assignee && !(t.assignees && t.assignees.includes(filters.assignee))) return false;
             if (filters.priority && t.priority !== filters.priority) return false;
-            if (filters.myTasks && currentUser && t.assignee !== currentUser.id) return false;
+            if (filters.myTasks && currentUser && !(t.assignees && t.assignees.includes(currentUser.id))) return false;
             return true;
         });
     }
@@ -305,7 +341,6 @@
         card.className = 'task-card';
         card.dataset.taskId = task.id;
 
-        const member = getMember(task.assignee);
         const overdue = task.status !== 'done' && isOverdue(task.dueDate);
         if (overdue) card.classList.add('overdue');
 
@@ -319,6 +354,28 @@
 
         const priorityLabels = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
 
+        // Determine inline action buttons on hover/card bottom
+        let cardActionHtml = '';
+        const isUserAssignee = currentUser && task.assignees && task.assignees.includes(currentUser.id);
+        if ((task.status === 'backlog' || task.status === 'todo') && isUserAssignee) {
+            cardActionHtml = `
+                <button class="btn-card-action accept" data-task-id="${task.id}">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Accept
+                </button>
+            `;
+        }
+
+        const isTLorCEO = currentUser && (currentUser.role === 'Team Lead' || currentUser.role === 'CEO');
+        if (task.status === 'review' && isTLorCEO) {
+            cardActionHtml = `
+                <button class="btn-card-action review" data-task-id="${task.id}">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    Review Done
+                </button>
+            `;
+        }
+
         card.innerHTML = `
             <div class="task-card-top">
                 <span class="priority-badge ${task.priority}">${priorityLabels[task.priority]}</span>
@@ -329,10 +386,7 @@
             </div>
             <div class="task-card-title">${escapeHtml(task.title)}</div>
             <div class="task-card-bottom">
-                <div class="task-assignee">
-                    <div class="task-assignee-avatar" style="background:${member ? member.color : '#94A3B8'}">${member ? member.initials : '?'}</div>
-                    <span class="task-assignee-name">${member ? member.name : 'Unassigned'}</span>
-                </div>
+                ${renderAvatarStack(task.assignees)}
                 ${hasWriteAccess() ? `
                 <div class="task-card-actions">
                     <button class="btn-icon btn-edit-card" data-task-id="${task.id}" title="Edit">
@@ -344,11 +398,12 @@
                 </div>
                 ` : ''}
             </div>
+            ${cardActionHtml ? `<div class="task-card-action-bar">${cardActionHtml}</div>` : ''}
         `;
 
         // Click to view detail
         card.addEventListener('click', (e) => {
-            if (e.target.closest('.btn-edit-card') || e.target.closest('.btn-delete-card')) return;
+            if (e.target.closest('.btn-edit-card') || e.target.closest('.btn-delete-card') || e.target.closest('.btn-card-action')) return;
             openDetailModal(task.id);
         });
 
@@ -367,6 +422,24 @@
             delBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 openDeleteModal(task.id);
+            });
+        }
+
+        // Accept task action
+        const acceptAct = card.querySelector('.btn-card-action.accept');
+        if (acceptAct) {
+            acceptAct.addEventListener('click', (e) => {
+                e.stopPropagation();
+                acceptTask(task.id);
+            });
+        }
+
+        // Review done action
+        const reviewAct = card.querySelector('.btn-card-action.review');
+        if (reviewAct) {
+            reviewAct.addEventListener('click', (e) => {
+                e.stopPropagation();
+                completeTLReview(task.id);
             });
         }
 
@@ -425,18 +498,19 @@
         const task = tasks.find(t => t.id === taskId);
         if (!task || task.status === targetColumn) return;
 
-        const fromCol = getColumnName(task.status);
-        const toCol = getColumnName(targetColumn);
+        const fromCol = task.status;
+        const toCol = targetColumn;
 
         task.status = targetColumn;
         task.activity.push({
-            text: `${currentUser.name} moved from ${fromCol} → ${toCol}`,
+            text: `${currentUser.name} moved from ${getColumnName(fromCol)} → ${getColumnName(toCol)}`,
             time: Date.now()
         });
 
+        logStatusChange(task.id, fromCol, toCol);
         saveTasks();
         renderBoard();
-        showToast(`Moved to ${toCol}`, 'success');
+        showToast(`Moved to ${getColumnName(toCol)}`, 'success');
     }
 
     // ═══════ TASK MODAL (Create / Edit) ═══════
@@ -444,6 +518,14 @@
         byId('modalTitle').textContent = 'New Task';
         byId('modalSubmitBtn').textContent = 'Create Task';
         byId('taskForm').reset();
+        
+        // Reset assignee checkboxes
+        const checkboxes = document.querySelectorAll('input[name="taskAssignees"]');
+        checkboxes.forEach(cb => {
+            cb.checked = false;
+            cb.parentElement.classList.remove('active');
+        });
+
         byId('taskId').value = '';
         byId('taskModal').classList.remove('hidden');
     }
@@ -457,7 +539,14 @@
         byId('taskId').value = task.id;
         byId('taskTitle').value = task.title;
         byId('taskDescription').value = task.description || '';
-        byId('taskAssignee').value = task.assignee;
+        
+        // Reset and check multi-assignee boxes
+        const checkboxes = document.querySelectorAll('input[name="taskAssignees"]');
+        checkboxes.forEach(cb => {
+            cb.checked = task.assignees && task.assignees.includes(cb.value);
+            cb.parentElement.classList.toggle('active', cb.checked);
+        });
+
         byId('taskPriority').value = task.priority;
         byId('taskDueDate').value = task.dueDate || '';
         byId('taskModal').classList.remove('hidden');
@@ -473,11 +562,17 @@
         const id = byId('taskId').value;
         const title = byId('taskTitle').value.trim();
         const description = byId('taskDescription').value.trim();
-        const assignee = byId('taskAssignee').value;
+        
+        // Read checked assignees
+        const assigneeCbs = document.querySelectorAll('input[name="taskAssignees"]:checked');
+        const assignees = Array.from(assigneeCbs).map(cb => cb.value);
         const priority = byId('taskPriority').value;
         const dueDate = byId('taskDueDate').value;
 
-        if (!title || !assignee || !priority) return;
+        if (!title || assignees.length === 0 || !priority) {
+            showToast('Please fill out all required fields', 'error');
+            return;
+        }
 
         if (id) {
             // Edit
@@ -485,7 +580,7 @@
             if (!task) return;
             task.title = title;
             task.description = description;
-            task.assignee = assignee;
+            task.assignees = assignees;
             task.priority = priority;
             task.dueDate = dueDate;
             task.activity.push({ text: `${currentUser.name} edited this task`, time: Date.now() });
@@ -496,7 +591,7 @@
                 id: uuid(),
                 title,
                 description,
-                assignee,
+                assignees,
                 priority,
                 dueDate,
                 status: 'backlog',
@@ -505,6 +600,7 @@
                 activity: [{ text: `Task created by ${currentUser.name}`, time: Date.now() }]
             };
             tasks.push(newTask);
+            logStatusChange(newTask.id, 'none', 'backlog');
             showToast('Task created', 'success');
         }
 
@@ -518,7 +614,12 @@
         const task = tasks.find(t => t.id === taskId);
         if (!task) return;
 
-        const member = getMember(task.assignee);
+        const assigneesList = task.assignees && task.assignees.length > 0
+            ? task.assignees.map(id => {
+                const m = getMember(id);
+                return m ? `${m.name} (${m.role})` : id;
+              }).join(', ')
+            : 'Unassigned';
         const creator = getMember(task.createdBy);
         const col = COLUMNS.find(c => c.id === task.status);
 
@@ -534,7 +635,7 @@
 
         byId('detailTitle').textContent = task.title;
         byId('detailDescription').textContent = task.description || '';
-        byId('detailAssignee').textContent = member ? `${member.name} (${member.role})` : 'Unassigned';
+        byId('detailAssignee').textContent = assigneesList;
         byId('detailDueDate').textContent = task.dueDate ? formatDate(task.dueDate) : '—';
         byId('detailCreatedBy').textContent = creator ? `${creator.name} (${creator.role})` : '—';
         byId('detailCreatedAt').textContent = formatTime(task.createdAt);
@@ -553,20 +654,70 @@
             activityList.innerHTML = '<div class="activity-item" style="opacity:0.5;">No activity yet</div>';
         }
 
-        // Actions visibility
-        const actionsSection = byId('detailActions');
+        // Action Buttons inside Detail Modal
+        let customButtonsHtml = '';
+        const isUserAssignee = task.assignees && task.assignees.includes(currentUser.id);
+        if ((task.status === 'backlog' || task.status === 'todo') && isUserAssignee) {
+            customButtonsHtml += `
+                <button class="btn-detail-action accept" id="detailAcceptBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Accept Task
+                </button>
+            `;
+        }
+
+        const isTLorCEO = currentUser && (currentUser.role === 'Team Lead' || currentUser.role === 'CEO');
+        if (task.status === 'review' && isTLorCEO) {
+            customButtonsHtml += `
+                <button class="btn-detail-action review" id="detailReviewBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    TL Review Done
+                </button>
+            `;
+        }
+
+        let editDeleteHtml = '';
         if (hasWriteAccess()) {
-            actionsSection.classList.remove('hidden');
+            editDeleteHtml = `
+                <button class="btn-secondary btn-edit" id="detailEditBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Edit
+                </button>
+                <button class="btn-danger" id="detailDeleteBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Delete
+                </button>
+            `;
+        }
+
+        const actionsSection = byId('detailActions');
+        actionsSection.innerHTML = customButtonsHtml + editDeleteHtml;
+        actionsSection.classList.remove('hidden');
+
+        // Bind clicks
+        if (byId('detailAcceptBtn')) {
+            byId('detailAcceptBtn').onclick = () => {
+                acceptTask(taskId);
+                closeDetailModal();
+            };
+        }
+        if (byId('detailReviewBtn')) {
+            byId('detailReviewBtn').onclick = () => {
+                completeTLReview(taskId);
+                closeDetailModal();
+            };
+        }
+        if (byId('detailEditBtn')) {
             byId('detailEditBtn').onclick = () => {
                 closeDetailModal();
                 openEditModal(taskId);
             };
+        }
+        if (byId('detailDeleteBtn')) {
             byId('detailDeleteBtn').onclick = () => {
                 closeDetailModal();
                 openDeleteModal(taskId);
             };
-        } else {
-            actionsSection.classList.add('hidden');
         }
 
         byId('detailModal').classList.remove('hidden');
@@ -658,20 +809,38 @@
         byId('deleteCancelBtn').addEventListener('click', closeDeleteModal);
         byId('deleteConfirmBtn').addEventListener('click', confirmDelete);
 
+        // Daily Status Modal Event listeners
+        byId('dailyStatusCloseBtn').addEventListener('click', closeDailyStatusModal);
+        byId('dailyStatusCancelBtn').addEventListener('click', closeDailyStatusModal);
+        byId('dailyStatusForm').addEventListener('submit', handleDailyStatusSubmit);
+
+        // Request Status Modal Event listeners
+        byId('requestStatusCloseBtn').addEventListener('click', closeRequestStatusModal);
+        byId('requestStatusCancelBtn').addEventListener('click', closeRequestStatusModal);
+        byId('requestStatusForm').addEventListener('submit', handleRequestStatusSubmit);
+
         // Logout
         byId('logoutBtn').addEventListener('click', () => {
+            if (currentUser) {
+                logOnlineSession(currentUser.id, 'logout');
+                sessionStorage.removeItem('logged_online_this_session');
+                sessionStorage.removeItem('status_prompted_this_session');
+            }
             clearSession();
             showLogin();
         });
 
         // Close modals on overlay click
-        ['taskModal', 'detailModal', 'deleteModal'].forEach(id => {
-            byId(id).addEventListener('click', (e) => {
-                if (e.target === byId(id)) {
-                    byId(id).classList.add('hidden');
-                    deleteTargetId = null;
-                }
-            });
+        ['taskModal', 'detailModal', 'deleteModal', 'pinModal', 'dailyStatusModal', 'requestStatusModal'].forEach(id => {
+            const modal = byId(id);
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.add('hidden');
+                        if (id === 'deleteModal') deleteTargetId = null;
+                    }
+                });
+            }
         });
 
         // Keyboard: Escape to close modals
@@ -681,12 +850,29 @@
                 closeDetailModal();
                 closeDeleteModal();
                 closePinModal();
+                closeDailyStatusModal();
+                closeRequestStatusModal();
             }
+        });
+
+        // Sidebar tab toggles
+        document.querySelectorAll('.status-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.status-tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.status-tab-pane').forEach(p => p.classList.remove('active'));
+                
+                btn.classList.add('active');
+                const paneId = btn.dataset.tab === 'updates' ? 'paneUpdates'
+                             : btn.dataset.tab === 'status-logs' ? 'paneStatusLogs'
+                             : 'paneOnlineLogs';
+                byId(paneId).classList.add('active');
+            });
         });
 
         setupFilters();
         setupPins();
         setupChat();
+        setupStatusSidebar();
     }
 
     // ═══════ PINS MODULE ═══════
@@ -948,6 +1134,12 @@
         heartbeatInterval = setInterval(() => {
             saveOnlineStatus();
             renderChatMembers();
+            checkDeadlines();
+            checkStatusRequests();
+            
+            if (statusSidebarOpen) {
+                renderStatusSidebar();
+            }
         }, 5000);
     }
 
@@ -1070,15 +1262,467 @@
                 }
             } else if (e.key === ONLINE_KEY) {
                 renderChatMembers();
+            } else if (e.key === STATUS_UPDATES_KEY || e.key === STATUS_LOG_KEY || e.key === ONLINE_LOG_KEY) {
+                if (statusSidebarOpen) {
+                    renderStatusSidebar();
+                }
+            } else if (e.key === STATUS_REQUESTS_KEY) {
+                checkStatusRequests();
             }
         });
 
         renderChatMembers();
     }
 
+    // ═══════ UPGRADE FEATURES (MULTIPLE ASSIGNEES, AUTO ACTIONS, DAILY STATUS) ═══════
+    function loadLogs() {
+        try {
+            dailyUpdates = JSON.parse(localStorage.getItem(STATUS_UPDATES_KEY)) || [];
+            statusLogs = JSON.parse(localStorage.getItem(STATUS_LOG_KEY)) || [];
+            onlineLogs = JSON.parse(localStorage.getItem(ONLINE_LOG_KEY)) || [];
+        } catch {
+            dailyUpdates = [];
+            statusLogs = [];
+            onlineLogs = [];
+        }
+    }
+
+    function saveDailyUpdates() {
+        localStorage.setItem(STATUS_UPDATES_KEY, JSON.stringify(dailyUpdates));
+    }
+
+    function saveStatusLogs() {
+        localStorage.setItem(STATUS_LOG_KEY, JSON.stringify(statusLogs));
+    }
+
+    function saveOnlineLogs() {
+        localStorage.setItem(ONLINE_LOG_KEY, JSON.stringify(onlineLogs));
+    }
+
+    function renderAvatarStack(assigneeIds) {
+        if (!assigneeIds || assigneeIds.length === 0) {
+            return `
+                <div class="task-assignee">
+                    <div class="task-assignee-avatar" style="background:#94A3B8">?</div>
+                    <span class="task-assignee-name">Unassigned</span>
+                </div>
+            `;
+        }
+
+        const members = assigneeIds.map(getMember).filter(Boolean);
+        const initialsList = members.map(m => m.name).join(', ');
+
+        if (members.length === 1) {
+            const m = members[0];
+            return `
+                <div class="task-assignee" title="${m.name} (${m.role})">
+                    <div class="task-assignee-avatar" style="background:${m.color}">${m.initials}</div>
+                    <span class="task-assignee-name">${m.name}</span>
+                </div>
+            `;
+        }
+
+        const stackHtml = members.map(m => `
+            <div class="task-assignee-avatar" style="background:${m.color}" title="${m.name} (${m.role})">${m.initials}</div>
+        `).join('');
+
+        return `
+            <div class="task-assignee" title="${initialsList}">
+                <div class="avatar-stack">
+                    ${stackHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    function populateAssigneesGrid() {
+        const grid = byId('taskAssigneesGrid');
+        if (!grid) return;
+
+        loadOnlineStatuses();
+        const now = Date.now();
+
+        grid.innerHTML = TEAM.map(m => {
+            const lastActive = onlineUsers[m.id] || 0;
+            const isOnline = (now - lastActive) < 15000;
+            return `
+                <label class="assignee-checkbox-card ${isOnline ? 'online' : ''}" data-user-id="${m.id}">
+                    <input type="checkbox" name="taskAssignees" value="${m.id}" onchange="this.parentElement.classList.toggle('active', this.checked)">
+                    <div class="checkbox-avatar" style="background:${m.color}">${m.initials}</div>
+                    <span class="checkbox-label" title="${m.name}">${m.name}</span>
+                    <span class="checkbox-indicator" title="Online"></span>
+                </label>
+            `;
+        }).join('');
+    }
+
+    function checkDeadlines() {
+        let changed = false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        tasks.forEach(t => {
+            if (t.dueDate && t.status !== 'done' && t.status !== 'backlog') {
+                const due = new Date(t.dueDate);
+                if (due < today) {
+                    const oldStatus = t.status;
+                    t.status = 'backlog';
+                    t.activity.push({
+                        text: `Deadline passed. Automatically moved from ${getColumnName(oldStatus)} → Backlog`,
+                        time: Date.now()
+                    });
+                    logStatusChange(t.id, oldStatus, 'backlog', 'System (Deadline Passed)');
+                    changed = true;
+                    showToast(`Task "${t.title}" moved to Backlog (missed deadline)`, 'error');
+                }
+            }
+        });
+
+        if (changed) {
+            saveTasks();
+            renderBoard();
+        }
+    }
+
+    function acceptTask(taskId) {
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        const oldStatus = task.status;
+        task.status = 'progress';
+        task.activity.push({
+            text: `${currentUser.name} accepted the task (moved to In Progress)`,
+            time: Date.now()
+        });
+
+        logStatusChange(task.id, oldStatus, 'progress');
+        saveTasks();
+        renderBoard();
+        showToast('Task accepted', 'success');
+    }
+
+    function completeTLReview(taskId) {
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        const oldStatus = task.status;
+        task.status = 'done';
+        task.activity.push({
+            text: `TL Offline Review Completed by ${currentUser.name} (marked Done automatically)`,
+            time: Date.now()
+        });
+
+        logStatusChange(task.id, oldStatus, 'done');
+        saveTasks();
+        renderBoard();
+        showToast('Review completed. Task marked Done!', 'success');
+    }
+
+    // Daily Status Logs
+    function logStatusChange(taskId, fromCol, toCol, userNameOverride = null) {
+        loadLogs();
+        const task = tasks.find(t => t.id === taskId);
+        const name = userNameOverride || (currentUser ? currentUser.name : 'Unknown');
+        const fromName = fromCol === 'none' ? 'None (Created)' : getColumnName(fromCol);
+        
+        statusLogs.unshift({
+            id: uuid(),
+            taskId,
+            taskTitle: task ? task.title : 'Deleted Task',
+            userName: name,
+            fromStatus: fromName,
+            toStatus: getColumnName(toCol),
+            timestamp: Date.now()
+        });
+        
+        if (statusLogs.length > 50) statusLogs.pop();
+        saveStatusLogs();
+        if (statusSidebarOpen) renderStatusSidebar();
+    }
+
+    function logOnlineSession(userId, type, details = '') {
+        loadLogs();
+        const member = getMember(userId);
+        
+        onlineLogs.unshift({
+            id: uuid(),
+            userName: member ? member.name : 'Unknown',
+            type,
+            details,
+            timestamp: Date.now()
+        });
+        
+        if (onlineLogs.length > 50) onlineLogs.pop();
+        saveOnlineLogs();
+        if (statusSidebarOpen) renderStatusSidebar();
+    }
+
+    function checkStatusRequests() {
+        if (!currentUser) return;
+        try {
+            const requests = JSON.parse(localStorage.getItem(STATUS_REQUESTS_KEY)) || {};
+            const lastSubmit = parseInt(localStorage.getItem('last_status_submit_' + currentUser.id) || '0');
+            const requestTime = requests[currentUser.id] || 0;
+            
+            const indicator = byId('statusBadgeIndicator');
+            if (requestTime > lastSubmit) {
+                if (indicator) indicator.classList.remove('hidden');
+                
+                if (!sessionStorage.getItem('status_prompted_this_session')) {
+                    sessionStorage.setItem('status_prompted_this_session', 'true');
+                    toggleStatusSidebar(true);
+                    openDailyStatusModal();
+                }
+            } else {
+                if (indicator) indicator.classList.add('hidden');
+            }
+        } catch { /* ignore */ }
+    }
+
+    function renderStatusSidebar() {
+        loadLogs();
+        
+        // Render Updates
+        const updatesList = byId('statusUpdatesList');
+        if (updatesList) {
+            if (dailyUpdates.length === 0) {
+                updatesList.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-tertiary);font-size:0.8rem;">No status updates submitted today.</div>';
+            } else {
+                updatesList.innerHTML = dailyUpdates.map(upd => {
+                    const member = getMember(upd.userId);
+                    return `
+                        <div class="daily-status-card">
+                            <div class="daily-status-card-header">
+                                <div class="daily-status-user">
+                                    <div class="daily-status-avatar" style="background:${member ? member.color : '#94A3B8'}">${member ? member.initials : '?'}</div>
+                                    <span class="daily-status-name">${member ? member.name : 'Unknown'}</span>
+                                </div>
+                                <span class="daily-status-time">${formatTime(upd.timestamp)}</span>
+                            </div>
+                            <div class="daily-status-text">${escapeHtml(upd.text)}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Action Box
+        const actionBox = byId('statusActionBox');
+        if (actionBox && currentUser) {
+            const isTLorCEO = currentUser.role === 'Team Lead' || currentUser.role === 'CEO';
+            let actionHtml = `
+                <span class="status-actions-title">My Actions</span>
+                <button class="btn-primary btn-sm" id="btnSubmitStatus" style="width:100%;justify-content:center;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    Submit My Status
+                </button>
+            `;
+            if (isTLorCEO) {
+                actionHtml += `
+                    <button class="btn-secondary btn-sm" id="btnRequestStatus" style="width:100%;justify-content:center;margin-top:0.35rem;border-color:rgba(99,102,241,0.2)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                        Request Status Updates
+                    </button>
+                `;
+            }
+            actionBox.innerHTML = actionHtml;
+            
+            byId('btnSubmitStatus').onclick = openDailyStatusModal;
+            if (isTLorCEO && byId('btnRequestStatus')) {
+                byId('btnRequestStatus').onclick = openRequestStatusModal;
+            }
+        }
+
+        // Render Status Change Log
+        const statusLogsList = byId('statusLogsList');
+        if (statusLogsList) {
+            if (statusLogs.length === 0) {
+                statusLogsList.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-tertiary);font-size:0.8rem;">No status activity logged yet.</div>';
+            } else {
+                statusLogsList.innerHTML = statusLogs.map(log => `
+                    <div class="log-item">
+                        <div class="log-dot move"></div>
+                        <div class="log-text">
+                            <strong>${escapeHtml(log.userName)}</strong> updated <strong>${escapeHtml(log.taskTitle)}</strong>: 
+                            <span style="opacity:0.85;">${escapeHtml(log.fromStatus)} &rarr; ${escapeHtml(log.toStatus)}</span>
+                        </div>
+                        <span class="log-time">${formatTime(log.timestamp)}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Render Online/Activity Log
+        const onlineLogsList = byId('onlineLogsList');
+        if (onlineLogsList) {
+            if (onlineLogs.length === 0) {
+                onlineLogsList.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-tertiary);font-size:0.8rem;">No login activity logged yet.</div>';
+            } else {
+                onlineLogsList.innerHTML = onlineLogs.map(log => {
+                    if (log.type === 'request') {
+                        return `
+                            <div class="log-item">
+                                <div class="log-dot request"></div>
+                                <div class="log-text">
+                                    <strong>${escapeHtml(log.userName)}</strong> ${escapeHtml(log.details || 'requested status updates')}
+                                </div>
+                                <span class="log-time">${formatTime(log.timestamp)}</span>
+                            </div>
+                        `;
+                    }
+                    const dotClass = log.type === 'login' ? 'online' : 'offline';
+                    const actionWord = log.type === 'login' ? 'logged in' : 'logged out';
+                    return `
+                        <div class="log-item">
+                            <div class="log-dot ${dotClass}"></div>
+                            <div class="log-text">
+                                <strong>${escapeHtml(log.userName)}</strong> ${actionWord}
+                            </div>
+                            <span class="log-time">${formatTime(log.timestamp)}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+    }
+
+    function toggleStatusSidebar(forceOpen = null) {
+        const sidebar = byId('statusSidebar');
+        const btn = byId('statusToggleBtn');
+        if (!sidebar || !btn) return;
+
+        const open = forceOpen !== null ? forceOpen : !statusSidebarOpen;
+        statusSidebarOpen = open;
+
+        if (open) {
+            if (chatPanelOpen) {
+                chatPanelOpen = false;
+                byId('chatSidebar').classList.add('hidden');
+                byId('chatToggleBtn').classList.remove('active');
+            }
+            
+            sidebar.classList.remove('hidden');
+            btn.classList.add('active');
+            renderStatusSidebar();
+        } else {
+            sidebar.classList.add('hidden');
+            btn.classList.remove('active');
+        }
+    }
+
+    function openDailyStatusModal() {
+        byId('dailyStatusForm').reset();
+        byId('dailyStatusModal').classList.remove('hidden');
+    }
+
+    function closeDailyStatusModal() {
+        byId('dailyStatusModal').classList.add('hidden');
+    }
+
+    function handleDailyStatusSubmit(e) {
+        e.preventDefault();
+        const text = byId('dailyStatusText').value.trim();
+        if (!text) return;
+
+        dailyUpdates.unshift({
+            id: uuid(),
+            userId: currentUser.id,
+            text,
+            timestamp: Date.now()
+        });
+
+        if (dailyUpdates.length > 50) dailyUpdates.pop();
+        saveDailyUpdates();
+
+        localStorage.setItem('last_status_submit_' + currentUser.id, Date.now());
+
+        // Remove request
+        try {
+            const requests = JSON.parse(localStorage.getItem(STATUS_REQUESTS_KEY)) || {};
+            delete requests[currentUser.id];
+            localStorage.setItem(STATUS_REQUESTS_KEY, JSON.stringify(requests));
+        } catch { /* ignore */ }
+
+        closeDailyStatusModal();
+        renderStatusSidebar();
+        checkStatusRequests();
+        showToast('Daily status submitted successfully!', 'success');
+    }
+
+    function openRequestStatusModal() {
+        const grid = byId('requestStatusGrid');
+        if (!grid) return;
+
+        grid.innerHTML = TEAM.filter(m => m.id !== currentUser.id).map(m => `
+            <label class="assignee-checkbox-card" data-user-id="${m.id}">
+                <input type="checkbox" name="requestMembers" value="${m.id}" onchange="this.parentElement.classList.toggle('active', this.checked)">
+                <div class="checkbox-avatar" style="background:${m.color}">${m.initials}</div>
+                <span class="checkbox-label" title="${m.name}">${m.name}</span>
+            </label>
+        `).join('');
+
+        byId('requestStatusForm').reset();
+        byId('requestStatusModal').classList.remove('hidden');
+    }
+
+    function closeRequestStatusModal() {
+        byId('requestStatusModal').classList.add('hidden');
+    }
+
+    function handleRequestStatusSubmit(e) {
+        e.preventDefault();
+        const checked = document.querySelectorAll('input[name="requestMembers"]:checked');
+        const memberIds = Array.from(checked).map(cb => cb.value);
+
+        if (memberIds.length === 0) {
+            showToast('Please select at least one team member', 'error');
+            return;
+        }
+
+        try {
+            const requests = JSON.parse(localStorage.getItem(STATUS_REQUESTS_KEY)) || {};
+            const names = memberIds.map(id => {
+                const m = getMember(id);
+                requests[id] = Date.now();
+                return m ? m.name : id;
+            }).join(', ');
+
+            localStorage.setItem(STATUS_REQUESTS_KEY, JSON.stringify(requests));
+
+            logOnlineSession(currentUser.id, 'request', `requested daily status from ${names}`);
+            
+            // Dispatch storage event to alert other tabs
+            localStorage.setItem('bitsotron_trigger_request_sync', Date.now());
+        } catch { /* ignore */ }
+
+        closeRequestStatusModal();
+        showToast('Daily status requested from team members!', 'success');
+    }
+
+    function setupStatusSidebar() {
+        loadLogs();
+        
+        // Chat Toggle overrides Status Sidebar
+        byId('chatToggleBtn').addEventListener('click', () => {
+            if (chatPanelOpen && statusSidebarOpen) {
+                statusSidebarOpen = false;
+                byId('statusSidebar').classList.add('hidden');
+                byId('statusToggleBtn').classList.remove('active');
+            }
+        });
+        
+        // Status Toggle button event listener
+        byId('statusToggleBtn').addEventListener('click', () => {
+            toggleStatusSidebar();
+        });
+
+        renderStatusSidebar();
+    }
+
     // ═══════ INIT ═══════
     function init() {
         loadTasks();
+        loadLogs();
         renderLogin();
         bindEvents();
 
