@@ -785,8 +785,11 @@ export default function Home() {
 
     function confirmDelete() {
         if (!deleteTargetId) return;
-        tasks = tasks.filter(t => t.id !== deleteTargetId);
-        saveTasks();
+        const targetId = deleteTargetId;
+        tasks = tasks.filter(t => t.id !== targetId);
+        localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+        fetch(`/api/tasks/${targetId}`, { method: 'DELETE' })
+            .catch(err => console.error('Neon Task Delete Error:', err));
         closeDeleteModal();
         renderBoard();
         showToast('Task deleted', 'error');
@@ -930,13 +933,10 @@ export default function Home() {
         } catch { pins = []; }
         if (pins.length === 0) {
             pins = SEED_PINS;
-            savePins();
         }
     }
 
-    function savePins() {
-        localStorage.setItem(PINS_KEY, JSON.stringify(pins));
-    }
+
 
     function renderPins() {
         const grid = byId('pinnedGrid');
@@ -1006,8 +1006,11 @@ export default function Home() {
             if (delBtn) {
                 delBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    pins = pins.filter(p => p.id !== pin.id);
-                    savePins();
+                    const pinId = pin.id;
+                    pins = pins.filter(p => p.id !== pinId);
+                    localStorage.setItem(PINS_KEY, JSON.stringify(pins));
+                    fetch(`/api/pins/${pinId}`, { method: 'DELETE' })
+                        .catch(err => console.error('Neon delete pin error:', err));
                     renderPins();
                     showToast('Pin removed', 'info');
                 });
@@ -1052,6 +1055,8 @@ export default function Home() {
         } else {
             byId('pinModalTitle').textContent = 'Add Pin';
             byId('pinSubmitBtn').textContent = 'Add Pin';
+            byId('pinType').value = 'link';
+            byId('pinUrlGroup').style.display = '';
         }
 
         byId('pinModal').classList.remove('hidden');
@@ -1073,20 +1078,22 @@ export default function Home() {
 
         if (!type || !title) return;
 
+        let pinToSave;
         if (id) {
-            const pin = pins.find(p => p.id === id);
-            if (!pin) return;
-            Object.assign(pin, { type, title, content, url, method, color });
+            pinToSave = pins.find(p => p.id === id);
+            if (!pinToSave) return;
+            Object.assign(pinToSave, { type, title, content, url, method, color });
             showToast('Pin updated', 'success');
         } else {
-            pins.push({
+            pinToSave = {
                 id: uuid(), type, title, content, url, method, color,
                 createdBy: currentUser.id, createdAt: Date.now()
-            });
+            };
+            pins.push(pinToSave);
             showToast('Pin added', 'success');
         }
 
-        savePins();
+        savePins(pinToSave);
         closePinModal();
         renderPins();
     }
@@ -1111,10 +1118,9 @@ export default function Home() {
             }
         });
 
-        // Add pin button visibility
+        // Add pin button (bind click unconditionally; visibility toggled in showApp)
         const addPinBtn = byId('addPinBtn');
-        if (hasWriteAccess()) {
-            addPinBtn.classList.remove('hidden');
+        if (addPinBtn) {
             addPinBtn.addEventListener('click', () => openPinModal());
         }
 
@@ -1528,7 +1534,7 @@ export default function Home() {
         const name = userNameOverride || (currentUser ? currentUser.name : 'Unknown');
         const fromName = fromCol === 'none' ? 'None (Created)' : getColumnName(fromCol);
         
-        statusLogs.unshift({
+        const newLog = {
             id: uuid(),
             taskId,
             taskTitle: task ? task.title : 'Deleted Task',
@@ -1536,10 +1542,11 @@ export default function Home() {
             fromStatus: fromName,
             toStatus: getColumnName(toCol),
             timestamp: Date.now()
-        });
+        };
+        statusLogs.unshift(newLog);
         
         if (statusLogs.length > 50) statusLogs.pop();
-        saveStatusLogs();
+        saveStatusLogs(newLog);
         if (statusSidebarOpen) renderStatusSidebar();
     }
 
@@ -1547,16 +1554,17 @@ export default function Home() {
         loadLogs();
         const member = getMember(userId);
         
-        onlineLogs.unshift({
+        const newLog = {
             id: uuid(),
             userName: member ? member.name : 'Unknown',
             type,
             details,
             timestamp: Date.now()
-        });
+        };
+        onlineLogs.unshift(newLog);
         
         if (onlineLogs.length > 50) onlineLogs.pop();
-        saveOnlineLogs();
+        saveOnlineLogs(newLog);
         if (statusSidebarOpen) renderStatusSidebar();
     }
 
@@ -1727,15 +1735,16 @@ export default function Home() {
         const text = byId('dailyStatusText').value.trim();
         if (!text) return;
 
-        dailyUpdates.unshift({
+        const newUpdate = {
             id: uuid(),
             userId: currentUser.id,
             text,
             timestamp: Date.now()
-        });
+        };
+        dailyUpdates.unshift(newUpdate);
 
         if (dailyUpdates.length > 50) dailyUpdates.pop();
-        saveDailyUpdates();
+        saveDailyUpdates(newUpdate);
 
         localStorage.setItem('last_status_submit_' + currentUser.id, Date.now());
 
