@@ -879,7 +879,7 @@ export default function Home() {
         });
 
         // Close modals on overlay click
-        ['taskModal', 'detailModal', 'deleteModal', 'pinModal', 'dailyStatusModal', 'requestStatusModal', 'pinDetailModal'].forEach(id => {
+        ['taskModal', 'detailModal', 'deleteModal', 'pinModal', 'dailyStatusModal', 'requestStatusModal', 'pinDetailModal', 'statusSidebar'].forEach(id => {
             const modal = byId(id);
             if (modal) {
                 modal.addEventListener('click', (e) => {
@@ -901,6 +901,7 @@ export default function Home() {
                 closePinDetailModal();
                 closeDailyStatusModal();
                 closeRequestStatusModal();
+                toggleStatusSidebar(false);
             }
         });
 
@@ -1898,6 +1899,13 @@ export default function Home() {
             toggleStatusSidebar();
         });
 
+        const closeBtn = byId('statusCloseBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                toggleStatusSidebar(false);
+            });
+        }
+
         renderStatusSidebar();
     }
 
@@ -2068,40 +2076,47 @@ export default function Home() {
                 </form>
             </aside>
 
-            <!-- ── Daily Status Sidebar ── -->
-            <aside id="statusSidebar" class="status-sidebar hidden">
-                <div class="status-sidebar-header">
-                    <h3 class="status-sidebar-title">Daily Status & Logs</h3>
-                </div>
-                <div class="status-tabs">
-                    <button class="status-tab-btn active" data-tab="updates">Updates</button>
-                    <button class="status-tab-btn" data-tab="status-logs">Status Log</button>
-                    <button class="status-tab-btn" data-tab="online-logs">Online Log</button>
-                </div>
-                <div class="status-tab-content">
-                    <!-- Updates Tab -->
-                    <div class="status-tab-pane active" id="paneUpdates">
-                        <div class="status-actions-box" id="statusActionBox">
-                            <!-- Populated by JS -->
+            <!-- ── Daily Status & Logs Popup Modal ── -->
+            <div id="statusSidebar" class="modal-overlay hidden">
+                <div class="modal glass-panel modal-lg" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h2>Daily Status & Logs</h2>
+                        <button class="btn-icon modal-close" id="statusCloseBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="modal-body" style="padding: 0 1.5rem 1.5rem 1.5rem;">
+                        <div class="status-tabs" style="margin-bottom: 1.5rem; justify-content: flex-start;">
+                            <button class="status-tab-btn active" data-tab="updates">Updates</button>
+                            <button class="status-tab-btn" data-tab="status-logs">Status Log</button>
+                            <button class="status-tab-btn" data-tab="online-logs">Online Log</button>
                         </div>
-                        <div id="statusUpdatesList" style="display:flex;flex-direction:column;gap:0.75rem;">
-                            <!-- Rendered by JS -->
+                        <div class="status-tab-content" style="max-height: 60vh; overflow-y: auto; padding-right: 5px;">
+                            <!-- Updates Tab -->
+                            <div class="status-tab-pane active" id="paneUpdates">
+                                <div class="status-actions-box" id="statusActionBox" style="margin-bottom: 1.25rem;">
+                                    <!-- Populated by JS -->
+                                </div>
+                                <div id="statusUpdatesList" style="display:flex;flex-direction:column;gap:0.75rem;">
+                                    <!-- Rendered by JS -->
+                                </div>
+                            </div>
+                            <!-- Status Log Tab -->
+                            <div class="status-tab-pane" id="paneStatusLogs">
+                                <div id="statusLogsList" style="display:flex;flex-direction:column;gap:0.5rem;">
+                                    <!-- Rendered by JS -->
+                                </div>
+                            </div>
+                            <!-- Online Log Tab -->
+                            <div class="status-tab-pane" id="paneOnlineLogs">
+                                <div id="onlineLogsList" style="display:flex;flex-direction:column;gap:0.5rem;">
+                                    <!-- Rendered by JS -->
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <!-- Status Log Tab -->
-                    <div class="status-tab-pane" id="paneStatusLogs">
-                        <div id="statusLogsList" style="display:flex;flex-direction:column;gap:0.5rem;">
-                            <!-- Rendered by JS -->
-                        </div>
-                    </div>
-                    <!-- Online Log Tab -->
-                    <div class="status-tab-pane" id="paneOnlineLogs">
-                        <div id="onlineLogsList" style="display:flex;flex-direction:column;gap:0.5rem;">
-                            <!-- Rendered by JS -->
-                        </div>
-                    </div>
                 </div>
-            </aside>
+            </div>
         </div>
     </div>
 
