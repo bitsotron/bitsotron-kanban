@@ -930,13 +930,10 @@ export default function Home() {
         } catch { pins = []; }
         if (pins.length === 0) {
             pins = SEED_PINS;
-            savePins();
         }
     }
 
-    function savePins() {
-        localStorage.setItem(PINS_KEY, JSON.stringify(pins));
-    }
+
 
     function renderPins() {
         const grid = byId('pinnedGrid');
@@ -1052,6 +1049,8 @@ export default function Home() {
         } else {
             byId('pinModalTitle').textContent = 'Add Pin';
             byId('pinSubmitBtn').textContent = 'Add Pin';
+            byId('pinType').value = 'link';
+            byId('pinUrlGroup').style.display = '';
         }
 
         byId('pinModal').classList.remove('hidden');
