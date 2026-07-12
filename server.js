@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
 
@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 
 // Setup Neon PG Connection Pool
 const pool = new Pool({
-    connectionString: 'postgresql://neondb_owner:npg_YQxu8LlSZMf4@ep-small-shape-atrhlzeh-pooler.c-9.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require',
+    connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_YQxu8LlSZMf4@ep-small-shape-atrhlzeh-pooler.c-9.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require',
 });
 
 app.use(express.json());
@@ -252,6 +252,10 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
-});
+if (require.main === module) {
+    app.listen(port, () => {
+        console.log(`Server listening on port ${port}`);
+    });
+}
+
+module.exports = app;
