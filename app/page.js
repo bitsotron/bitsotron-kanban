@@ -547,6 +547,7 @@ export default function Home() {
         const toCol = targetColumn;
 
         task.status = targetColumn;
+        task.updatedAt = Date.now();
         task.activity.push({
             text: `${currentUser.name} moved from ${getColumnName(fromCol)} → ${getColumnName(toCol)}`,
             time: Date.now()
@@ -628,6 +629,7 @@ export default function Home() {
             task.assignees = assignees;
             task.priority = priority;
             task.dueDate = dueDate;
+            task.updatedAt = Date.now();
             task.activity.push({ text: `${currentUser.name} edited this task`, time: Date.now() });
             showToast('Task updated', 'success');
         } else {
@@ -642,6 +644,7 @@ export default function Home() {
                 status: 'backlog',
                 createdBy: currentUser.id,
                 createdAt: Date.now(),
+                updatedAt: Date.now(),
                 activity: [{ text: `Task created by ${currentUser.name}`, time: Date.now() }]
             };
             tasks.push(newTask);
@@ -1547,6 +1550,7 @@ export default function Home() {
                 if (due < today) {
                     const oldStatus = t.status;
                     t.status = 'backlog';
+                    t.updatedAt = Date.now();
                     t.activity.push({
                         text: `Deadline passed. Automatically moved from ${getColumnName(oldStatus)} → Backlog`,
                         time: Date.now()
@@ -1570,6 +1574,7 @@ export default function Home() {
 
         const oldStatus = task.status;
         task.status = 'progress';
+        task.updatedAt = Date.now();
         task.activity.push({
             text: `${currentUser.name} accepted the task (moved to In Progress)`,
             time: Date.now()
@@ -1587,6 +1592,7 @@ export default function Home() {
 
         const oldStatus = task.status;
         task.status = 'done';
+        task.updatedAt = Date.now();
         task.activity.push({
             text: `TL Offline Review Completed by ${currentUser.name} (marked Done automatically)`,
             time: Date.now()

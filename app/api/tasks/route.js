@@ -28,6 +28,8 @@ export async function POST(request) {
     try {
         const body = await request.json();
         const { id, title, description, status, priority, dueDate, assignees, activity, createdBy, createdAt, updatedAt } = body;
+        const taskCreatedAt = createdAt || Date.now();
+        const taskUpdatedAt = updatedAt || Date.now();
         await pool.query(
             `INSERT INTO tasks (id, title, description, status, priority, due_date, assignees, activity, created_by, created_at, updated_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -42,7 +44,7 @@ export async function POST(request) {
                  created_by = EXCLUDED.created_by,
                  created_at = EXCLUDED.created_at,
                  updated_at = EXCLUDED.updated_at`,
-            [id, title, description, status, priority, dueDate || null, JSON.stringify(assignees || []), JSON.stringify(activity || []), createdBy, createdAt, updatedAt]
+            [id, title, description, status, priority, dueDate || null, JSON.stringify(assignees || []), JSON.stringify(activity || []), createdBy, taskCreatedAt, taskUpdatedAt]
         );
         return NextResponse.json({ success: true });
     } catch (err) {

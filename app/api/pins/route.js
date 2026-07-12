@@ -26,6 +26,7 @@ export async function POST(request) {
     try {
         const body = await request.json();
         const { id, type, title, content, url, method, color, createdBy, createdAt } = body;
+        const pinCreatedAt = createdAt || Date.now();
         await pool.query(
             `INSERT INTO pins (id, type, title, content, url, method, color, created_by, created_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -38,7 +39,7 @@ export async function POST(request) {
                  color = EXCLUDED.color,
                  created_by = EXCLUDED.created_by,
                  created_at = EXCLUDED.created_at`,
-            [id, type, title, content || null, url || null, method || 'GET', color || '#6366F1', createdBy, createdAt]
+            [id, type, title, content || null, url || null, method || 'GET', color || '#6366F1', createdBy, pinCreatedAt]
         );
         return NextResponse.json({ success: true });
     } catch (err) {
