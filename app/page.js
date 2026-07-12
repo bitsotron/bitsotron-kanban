@@ -1118,10 +1118,9 @@ export default function Home() {
             }
         });
 
-        // Add pin button visibility
+        // Add pin button (bind click unconditionally; visibility toggled in showApp)
         const addPinBtn = byId('addPinBtn');
-        if (hasWriteAccess()) {
-            addPinBtn.classList.remove('hidden');
+        if (addPinBtn) {
             addPinBtn.addEventListener('click', () => openPinModal());
         }
 
