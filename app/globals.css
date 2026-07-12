@@ -5,14 +5,6 @@
 /* ── Design Tokens ── */
 :root {
     /* Theme Inputs */
-    --bg-input: rgba(0, 0, 0, 0.03);
-    --border-input: 1px solid rgba(0, 0, 0, 0.03);
-    --bg-button-hover: rgba(0, 0, 0, 0.06);
-    --bg-column: rgba(255, 255, 255, 0.65);
-    --bg-column-hover: rgba(255, 255, 255, 0.78);
-    --bg-column-drag: rgba(255, 255, 255, 0.85);
-    --border-column: 1px solid rgba(255, 255, 255, 0.85);
-
     /* Base */
     --bg-primary: #F8F9FC;
     --bg-secondary: #FFFFFF;
@@ -304,10 +296,10 @@ body {
     align-items: center;
     gap: 0.75rem;
     padding: 0.85rem 1.1rem;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: var(--border-light);
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.9);
     border-radius: var(--radius-md);
     margin-bottom: 1rem;
     box-shadow: var(--glass-shadow);
@@ -408,10 +400,10 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 0 1.75rem;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border-bottom: var(--border-subtle);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     gap: 1.25rem;
     flex-shrink: 0;
     z-index: 50;
@@ -441,8 +433,8 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: var(--bg-input);
-    border: var(--border-input);
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.03);
     border-radius: 20px;
     padding: 0.45rem 0.95rem;
     transition: all var(--duration-fast) var(--ease-smooth);
@@ -474,8 +466,8 @@ body {
 .filter-select {
     padding: 0.45rem 1.8rem 0.45rem 0.85rem;
     border-radius: 20px;
-    border: var(--border-input);
-    background: var(--bg-input);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    background: rgba(0, 0, 0, 0.03);
     font-family: inherit;
     font-size: 0.78rem;
     font-weight: 600;
@@ -512,7 +504,7 @@ body {
     transition: all var(--duration-fast) var(--ease-smooth);
 }
 
-.btn-filter-toggle:hover { background: var(--bg-button-hover); }
+.btn-filter-toggle:hover { background: rgba(0, 0, 0, 0.06); }
 
 .btn-filter-toggle.active {
     background: var(--gradient-brand);
@@ -603,7 +595,7 @@ body {
     transition: all var(--duration-fast) var(--ease-smooth);
 }
 
-.btn-secondary:hover { background: var(--bg-button-hover); }
+.btn-secondary:hover { background: rgba(0, 0, 0, 0.06); }
 
 .btn-danger {
     display: inline-flex;
@@ -676,10 +668,10 @@ body {
     display: flex;
     flex-direction: column;
     border-radius: var(--radius-xl);
-    background: var(--bg-column);
-    backdrop-filter: var(--glass-blur) saturate(1.2);
-    -webkit-backdrop-filter: var(--glass-blur) saturate(1.2);
-    border: var(--border-column);
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+    border: 1px solid rgba(255, 255, 255, 0.85);
     box-shadow: 0 10px 30px rgba(99, 102, 241, 0.02), 0 1px 3px rgba(0, 0, 0, 0.02);
     overflow: hidden;
     transition: all var(--duration-normal) var(--ease-smooth);
@@ -689,13 +681,13 @@ body {
 }
 
 .column:hover {
-    background: var(--bg-column-hover);
+    background: rgba(255, 255, 255, 0.78);
     box-shadow: 0 16px 40px rgba(99, 102, 241, 0.05), 0 2px 6px rgba(0, 0, 0, 0.02);
 }
 
 .column.drag-over {
     box-shadow: 0 0 0 2px var(--accent-primary), 0 12px 36px rgba(99, 102, 241, 0.1);
-    background: var(--bg-column-drag);
+    background: rgba(255, 255, 255, 0.85);
 }
 
 .column-header {
@@ -780,7 +772,7 @@ body {
 /* ── Task Card ── */
 .task-card {
     background: var(--bg-secondary);
-    border: var(--border-subtle);
+    border: 1px solid rgba(0, 0, 0, 0.04);
     border-radius: var(--radius-md);
     padding: 1.15rem 1rem 1rem;
     cursor: pointer;
@@ -972,10 +964,10 @@ body {
 }
 
 .glass-panel {
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur) saturate(1.8);
-    -webkit-backdrop-filter: var(--glass-blur) saturate(1.8);
-    border: var(--border-light);
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(40px) saturate(1.8);
+    -webkit-backdrop-filter: blur(40px) saturate(1.8);
+    border: 1px solid rgba(255,255,255,0.9);
     border-radius: var(--radius-xl);
     box-shadow: 0 24px 80px rgba(0,0,0,0.1), 0 8px 24px rgba(0,0,0,0.06);
 }
@@ -1506,7 +1498,7 @@ select.form-input {
    ═══════════════════════════════════════ */
 .chat-sidebar {
     width: 320px;
-    background: var(--glass-bg);
+    background: rgba(255, 255, 255, 0.72);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border-left: var(--border-light);
@@ -1545,7 +1537,7 @@ select.form-input {
 .chat-members-section {
     padding: 0.75rem 1.25rem;
     border-bottom: var(--border-subtle);
-    background: var(--gradient-brand-subtle);
+    background: rgba(255, 255, 255, 0.4);
 }
 
 .chat-members-list {
@@ -1887,7 +1879,7 @@ select.form-input {
    ═══════════════════════════════════════ */
 .status-sidebar {
     width: 340px;
-    background: var(--glass-bg);
+    background: rgba(255, 255, 255, 0.72);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border-left: var(--border-light);
@@ -2126,131 +2118,3 @@ select.form-input {
     .user-info { display: none; }
 }
 
-/* ── Theme Overrides ── */
-[data-theme="dark"] {
-    --bg-primary: #0F172A;
-    --bg-secondary: #1E293B;
-    --bg-tertiary: #334155;
-    --bg-board: #0B0F19;
-
-    --text-primary: #F8FAFC;
-    --text-secondary: #94A3B8;
-    --text-tertiary: #64748B;
-
-    --gradient-brand-subtle: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.15) 100%);
-    --gradient-mesh: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.12) 0%, transparent 50%),
-                     radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.1) 0%, transparent 50%),
-                     radial-gradient(ellipse at 50% 80%, rgba(59,130,246,0.08) 0%, transparent 50%);
-
-    --glass-bg: rgba(30, 41, 59, 0.72);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0,0,0,0.2);
-    --glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0,0,0,0.3);
-
-    --border-light: 1px solid rgba(255, 255, 255, 0.08);
-    --border-subtle: 1px solid rgba(255, 255, 255, 0.05);
-    --shadow-xs: 0 1px 3px rgba(0,0,0,0.2);
-    --shadow-sm: 0 2px 8px rgba(0,0,0,0.25);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
-    --shadow-lg: 0 8px 32px rgba(0,0,0,0.35);
-    --shadow-xl: 0 16px 48px rgba(0,0,0,0.4);
-
-    --bg-input: rgba(255, 255, 255, 0.05);
-    --border-input: 1px solid rgba(255, 255, 255, 0.06);
-    --bg-button-hover: rgba(255, 255, 255, 0.08);
-    --bg-column: rgba(30, 41, 59, 0.65);
-    --bg-column-hover: rgba(30, 41, 59, 0.78);
-    --bg-column-drag: rgba(30, 41, 59, 0.85);
-    --border-column: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-[data-theme="black"] {
-    --bg-primary: #000000;
-    --bg-secondary: #0A0A0A;
-    --bg-tertiary: #141414;
-    --bg-board: #000000;
-
-    --text-primary: #FFFFFF;
-    --text-secondary: #A3A3A3;
-    --text-tertiary: #525252;
-
-    --gradient-brand-subtle: linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.2) 100%);
-    --gradient-mesh: radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.18) 0%, transparent 50%),
-                     radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.15) 0%, transparent 50%),
-                     radial-gradient(ellipse at 50% 80%, rgba(59,130,246,0.12) 0%, transparent 50%);
-
-    --glass-bg: rgba(10, 10, 10, 0.85);
-    --glass-border: rgba(255, 255, 255, 0.12);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0,0,0,0.4);
-    --glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0,0,0,0.5);
-
-    --border-light: 1px solid rgba(255, 255, 255, 0.12);
-    --border-subtle: 1px solid rgba(255, 255, 255, 0.08);
-    --shadow-xs: 0 1px 3px rgba(0,0,0,0.3);
-    --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
-    --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
-    --shadow-xl: 0 16px 48px rgba(0,0,0,0.7);
-
-    --bg-input: rgba(255, 255, 255, 0.08);
-    --border-input: 1px solid rgba(255, 255, 255, 0.12);
-    --bg-button-hover: rgba(255, 255, 255, 0.12);
-    --bg-column: rgba(10, 10, 10, 0.65);
-    --bg-column-hover: rgba(10, 10, 10, 0.78);
-    --bg-column-drag: rgba(10, 10, 10, 0.85);
-    --border-column: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-[data-theme="dark"] .login-screen::before,
-[data-theme="black"] .login-screen::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.55);
-    z-index: 0;
-}
-[data-theme="dark"] .login-container,
-[data-theme="black"] .login-container {
-    z-index: 1;
-}
-
-/* Theme Selector styles */
-.theme-selector {
-    display: inline-flex;
-    background: var(--bg-tertiary);
-    border: var(--border-light);
-    border-radius: 30px;
-    padding: 3px;
-    margin-right: 0.75rem;
-    gap: 3px;
-    align-items: center;
-}
-
-.theme-btn {
-    border: none;
-    background: transparent;
-    color: var(--text-secondary);
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all var(--duration-fast) var(--ease-smooth);
-}
-
-.theme-btn:hover {
-    color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.05);
-}
-
-[data-theme="light"] .theme-btn:hover {
-    background: rgba(0, 0, 0, 0.03);
-}
-
-.theme-btn.active {
-    background: var(--bg-secondary);
-    color: var(--accent-primary);
-    box-shadow: var(--shadow-sm);
-}
