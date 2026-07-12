@@ -879,7 +879,7 @@ export default function Home() {
         });
 
         // Close modals on overlay click
-        ['taskModal', 'detailModal', 'deleteModal', 'pinModal', 'dailyStatusModal', 'requestStatusModal'].forEach(id => {
+        ['taskModal', 'detailModal', 'deleteModal', 'pinModal', 'dailyStatusModal', 'requestStatusModal', 'pinDetailModal'].forEach(id => {
             const modal = byId(id);
             if (modal) {
                 modal.addEventListener('click', (e) => {
@@ -898,6 +898,7 @@ export default function Home() {
                 closeDetailModal();
                 closeDeleteModal();
                 closePinModal();
+                closePinDetailModal();
                 closeDailyStatusModal();
                 closeRequestStatusModal();
             }
@@ -953,7 +954,10 @@ export default function Home() {
             const card = document.createElement('div');
             card.className = 'pin-card';
             card.style.setProperty('--pin-color', pin.color);
-            card.querySelector;
+            card.style.cursor = 'pointer';
+            card.addEventListener('click', () => {
+                openPinDetailModal(pin);
+            });
 
             const creator = getMember(pin.createdBy);
             const typeLabels = { note: 'Note', link: 'Link', api: 'API' };
@@ -1066,6 +1070,68 @@ export default function Home() {
         byId('pinModal').classList.add('hidden');
     }
 
+    function openPinDetailModal(pin) {
+        const creator = getMember(pin.createdBy);
+        const typeLabels = { note: 'Note', link: 'Link', api: 'API' };
+        
+        const badge = byId('pinDetailType');
+        if (badge) {
+            badge.className = `pin-type-badge ${pin.type}`;
+            badge.textContent = typeLabels[pin.type] || pin.type;
+        }
+        
+        const titleEl = byId('pinDetailTitle');
+        if (titleEl) titleEl.textContent = pin.title;
+        
+        const contentEl = byId('pinDetailContent');
+        if (contentEl) {
+            contentEl.textContent = pin.content || '';
+            contentEl.style.display = pin.content ? '' : 'none';
+        }
+        
+        const urlSection = byId('pinDetailUrlSection');
+        if (urlSection) {
+            if ((pin.type === 'link' || pin.type === 'api') && pin.url) {
+                urlSection.style.display = '';
+                const urlLink = byId('pinDetailUrl');
+                if (urlLink) urlLink.href = pin.url;
+                const urlText = byId('pinDetailUrlText');
+                if (urlText) urlText.textContent = pin.url;
+                
+                const methodBadge = byId('pinDetailMethod');
+                if (methodBadge) {
+                    if (pin.type === 'api' && pin.method) {
+                        methodBadge.style.display = '';
+                        methodBadge.className = `pin-method-badge ${pin.method.toLowerCase()}`;
+                        methodBadge.textContent = pin.method;
+                    } else {
+                        methodBadge.style.display = 'none';
+                    }
+                }
+            } else {
+                urlSection.style.display = 'none';
+            }
+        }
+        
+        const authorEl = byId('pinDetailAuthor');
+        if (authorEl) authorEl.textContent = `by ${creator ? creator.name : 'Unknown'}`;
+        
+        const dateEl = byId('pinDetailDate');
+        if (dateEl) dateEl.textContent = formatDate(pin.createdAt);
+        
+        const modalObj = byId('pinDetailModal');
+        if (modalObj) {
+            const innerModal = modalObj.querySelector('.modal');
+            if (innerModal) innerModal.style.borderLeft = `5px solid ${pin.color}`;
+            modalObj.classList.remove('hidden');
+        }
+    }
+
+    function closePinDetailModal() {
+        const modal = byId('pinDetailModal');
+        if (modal) modal.classList.add('hidden');
+    }
+
     function handlePinSubmit(e) {
         e.preventDefault();
         const id = byId('pinId').value;
@@ -1128,6 +1194,10 @@ export default function Home() {
         byId('pinForm').addEventListener('submit', handlePinSubmit);
         byId('pinModalCloseBtn').addEventListener('click', closePinModal);
         byId('pinCancelBtn').addEventListener('click', closePinModal);
+        const closeDetailBtn = byId('pinDetailCloseBtn');
+        if (closeDetailBtn) {
+            closeDetailBtn.addEventListener('click', closePinDetailModal);
+        }
 
         // Type change → show/hide URL and Method fields
         byId('pinType').addEventListener('change', (e) => {
@@ -2262,6 +2332,33 @@ export default function Home() {
                     <button type="submit" class="btn-primary">Send Request</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ═══════════════ PIN DETAIL MODAL ═══════════════ -->
+    <div id="pinDetailModal" class="modal-overlay hidden">
+        <div class="modal glass-panel modal-sm" style="border-radius: var(--radius-xl); overflow: hidden;">
+            <div class="modal-header">
+                <span id="pinDetailType" class="pin-type-badge note">Note</span>
+                <button class="btn-icon modal-close" id="pinDetailCloseBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 0 1.5rem 1.5rem 1.5rem;">
+                <h2 id="pinDetailTitle" style="margin: 0.5rem 0 1rem 0; font-size: 1.3rem; font-weight: 700; color: var(--text-primary); line-height: 1.4; word-wrap: break-word;">Pin Title</h2>
+                <div id="pinDetailContent" style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; white-space: pre-wrap; margin-bottom: 1.5rem; word-break: break-word;">Pin content goes here...</div>
+                <div id="pinDetailUrlSection" style="margin-bottom: 1.5rem; display: none;">
+                    <span style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 0.4rem;">Reference Link</span>
+                    <a id="pinDetailUrl" href="#" target="_blank" rel="noopener" class="pin-card-url" style="display: inline-flex; width: 100%;">
+                        <span id="pinDetailMethod" class="pin-method-badge get" style="margin-right: 8px; display: none;">GET</span>
+                        <span id="pinDetailUrlText" style="word-break: break-all;">https://...</span>
+                    </a>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 1rem; font-size: 0.8rem; color: var(--text-tertiary);">
+                    <span id="pinDetailAuthor">by Unknown</span>
+                    <span id="pinDetailDate">June 12, 2026</span>
+                </div>
+            </div>
         </div>
     </div>
 
