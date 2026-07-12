@@ -4,6 +4,15 @@
 
 /* ── Design Tokens ── */
 :root {
+    /* Theme Inputs */
+    --bg-input: rgba(0, 0, 0, 0.03);
+    --border-input: 1px solid rgba(0, 0, 0, 0.03);
+    --bg-button-hover: rgba(0, 0, 0, 0.06);
+    --bg-column: rgba(255, 255, 255, 0.65);
+    --bg-column-hover: rgba(255, 255, 255, 0.78);
+    --bg-column-drag: rgba(255, 255, 255, 0.85);
+    --border-column: 1px solid rgba(255, 255, 255, 0.85);
+
     /* Base */
     --bg-primary: #F8F9FC;
     --bg-secondary: #FFFFFF;
@@ -399,10 +408,10 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 0 1.75rem;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-bottom: var(--border-subtle);
     gap: 1.25rem;
     flex-shrink: 0;
     z-index: 50;
@@ -432,8 +441,8 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(0, 0, 0, 0.03);
-    border: 1px solid rgba(0, 0, 0, 0.03);
+    background: var(--bg-input);
+    border: var(--border-input);
     border-radius: 20px;
     padding: 0.45rem 0.95rem;
     transition: all var(--duration-fast) var(--ease-smooth);
@@ -465,8 +474,8 @@ body {
 .filter-select {
     padding: 0.45rem 1.8rem 0.45rem 0.85rem;
     border-radius: 20px;
-    border: 1px solid rgba(0, 0, 0, 0.03);
-    background: rgba(0, 0, 0, 0.03);
+    border: var(--border-input);
+    background: var(--bg-input);
     font-family: inherit;
     font-size: 0.78rem;
     font-weight: 600;
@@ -503,7 +512,7 @@ body {
     transition: all var(--duration-fast) var(--ease-smooth);
 }
 
-.btn-filter-toggle:hover { background: rgba(0, 0, 0, 0.06); }
+.btn-filter-toggle:hover { background: var(--bg-button-hover); }
 
 .btn-filter-toggle.active {
     background: var(--gradient-brand);
@@ -594,7 +603,7 @@ body {
     transition: all var(--duration-fast) var(--ease-smooth);
 }
 
-.btn-secondary:hover { background: rgba(0, 0, 0, 0.06); }
+.btn-secondary:hover { background: var(--bg-button-hover); }
 
 .btn-danger {
     display: inline-flex;
@@ -667,10 +676,10 @@ body {
     display: flex;
     flex-direction: column;
     border-radius: var(--radius-xl);
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(20px) saturate(1.2);
-    -webkit-backdrop-filter: blur(20px) saturate(1.2);
-    border: 1px solid rgba(255, 255, 255, 0.85);
+    background: var(--bg-column);
+    backdrop-filter: var(--glass-blur) saturate(1.2);
+    -webkit-backdrop-filter: var(--glass-blur) saturate(1.2);
+    border: var(--border-column);
     box-shadow: 0 10px 30px rgba(99, 102, 241, 0.02), 0 1px 3px rgba(0, 0, 0, 0.02);
     overflow: hidden;
     transition: all var(--duration-normal) var(--ease-smooth);
@@ -680,13 +689,13 @@ body {
 }
 
 .column:hover {
-    background: rgba(255, 255, 255, 0.78);
+    background: var(--bg-column-hover);
     box-shadow: 0 16px 40px rgba(99, 102, 241, 0.05), 0 2px 6px rgba(0, 0, 0, 0.02);
 }
 
 .column.drag-over {
     box-shadow: 0 0 0 2px var(--accent-primary), 0 12px 36px rgba(99, 102, 241, 0.1);
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--bg-column-drag);
 }
 
 .column-header {
@@ -771,7 +780,7 @@ body {
 /* ── Task Card ── */
 .task-card {
     background: var(--bg-secondary);
-    border: 1px solid rgba(0, 0, 0, 0.04);
+    border: var(--border-subtle);
     border-radius: var(--radius-md);
     padding: 1.15rem 1rem 1rem;
     cursor: pointer;
@@ -963,10 +972,10 @@ body {
 }
 
 .glass-panel {
-    background: rgba(255, 255, 255, 0.88);
-    backdrop-filter: blur(40px) saturate(1.8);
-    -webkit-backdrop-filter: blur(40px) saturate(1.8);
-    border: 1px solid rgba(255,255,255,0.9);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur) saturate(1.8);
+    -webkit-backdrop-filter: var(--glass-blur) saturate(1.8);
+    border: var(--border-light);
     border-radius: var(--radius-xl);
     box-shadow: 0 24px 80px rgba(0,0,0,0.1), 0 8px 24px rgba(0,0,0,0.06);
 }
@@ -1203,10 +1212,10 @@ select.form-input {
     gap: 0.6rem;
     padding: 0.75rem 1.15rem;
     border-radius: var(--radius-md);
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255,255,255,0.9);
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--border-light);
     box-shadow: var(--shadow-lg);
     font-size: 0.85rem;
     font-weight: 500;
@@ -1497,7 +1506,7 @@ select.form-input {
    ═══════════════════════════════════════ */
 .chat-sidebar {
     width: 320px;
-    background: rgba(255, 255, 255, 0.72);
+    background: var(--glass-bg);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border-left: var(--border-light);
@@ -1536,7 +1545,7 @@ select.form-input {
 .chat-members-section {
     padding: 0.75rem 1.25rem;
     border-bottom: var(--border-subtle);
-    background: rgba(255, 255, 255, 0.4);
+    background: var(--gradient-brand-subtle);
 }
 
 .chat-members-list {
@@ -1878,7 +1887,7 @@ select.form-input {
    ═══════════════════════════════════════ */
 .status-sidebar {
     width: 340px;
-    background: rgba(255, 255, 255, 0.72);
+    background: var(--glass-bg);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border-left: var(--border-light);
@@ -2145,6 +2154,14 @@ select.form-input {
     --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
     --shadow-lg: 0 8px 32px rgba(0,0,0,0.35);
     --shadow-xl: 0 16px 48px rgba(0,0,0,0.4);
+
+    --bg-input: rgba(255, 255, 255, 0.05);
+    --border-input: 1px solid rgba(255, 255, 255, 0.06);
+    --bg-button-hover: rgba(255, 255, 255, 0.08);
+    --bg-column: rgba(30, 41, 59, 0.65);
+    --bg-column-hover: rgba(30, 41, 59, 0.78);
+    --bg-column-drag: rgba(30, 41, 59, 0.85);
+    --border-column: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="black"] {
@@ -2174,6 +2191,14 @@ select.form-input {
     --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
     --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
     --shadow-xl: 0 16px 48px rgba(0,0,0,0.7);
+
+    --bg-input: rgba(255, 255, 255, 0.08);
+    --border-input: 1px solid rgba(255, 255, 255, 0.12);
+    --bg-button-hover: rgba(255, 255, 255, 0.12);
+    --bg-column: rgba(10, 10, 10, 0.65);
+    --bg-column-hover: rgba(10, 10, 10, 0.78);
+    --bg-column-drag: rgba(10, 10, 10, 0.85);
+    --border-column: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 [data-theme="dark"] .login-screen::before,
