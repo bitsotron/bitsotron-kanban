@@ -1432,6 +1432,11 @@ export default function Home() {
             pins = SEED_PINS;
             savePins();
         }
+
+        const badge = byId('pinCountBadge');
+        if (badge) {
+            badge.textContent = pins.length;
+        }
     }
 
     function saveDailyUpdates(singleUpdate = null) {
